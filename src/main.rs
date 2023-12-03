@@ -3,7 +3,7 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use load_balancer::ThreadPool;
+use load_balancer::{RingBuffer, ThreadPool};
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
@@ -28,6 +28,9 @@ fn main() {
     let pool = ThreadPool::new(4);
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:8080").expect("Failed to bind, port already in use ");
+
+    let mut servers = RingBuffer::new(6);
+    servers.write("http://127.0.0.1:8081");
 
     for stream in listener.incoming() {
         pool.execute(|| match stream {

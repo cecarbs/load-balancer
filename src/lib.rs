@@ -1,4 +1,4 @@
-use core::fmt::Display;
+// use core::fmt::Display;
 use std::{
     fmt,
     sync::{mpsc, Arc, Mutex},
@@ -116,6 +116,40 @@ impl Worker {
             id,
             thread: Some(thread),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Routes {
+    capacity: usize,
+    servers: Vec<String>,
+    read_index: usize,
+}
+
+impl Routes {
+    pub fn new(&self, capacity: usize) -> Self {
+        let servers: Vec<String> = vec![String::new(); capacity];
+        Routes {
+            capacity,
+            servers,
+            read_index: 0,
+        }
+    }
+
+    pub fn add_server(&mut self, route: &str) -> Result<(), &'static str> {
+        if self.servers.len() == self.capacity {
+            Err("Not enough capacity!")
+        } else {
+            self.servers.push(route.to_string());
+            Ok(())
+        }
+    }
+
+    // TODO: rename function
+    pub fn get_server(&mut self) -> &str {
+        let server: &str = &self.servers[self.read_index];
+        self.read_index = (self.read_index + 1) % self.capacity;
+        server
     }
 }
 
