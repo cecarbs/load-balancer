@@ -128,12 +128,16 @@ pub struct Routes {
 
 impl Routes {
     pub fn new(capacity: usize) -> Self {
-        let servers: Vec<String> = vec![String::new(); capacity];
+        let servers: Vec<String> = Vec::new();
         Routes {
             capacity,
             servers,
             read_index: 0,
         }
+    }
+
+    fn is_full(&self) -> bool {
+        self.servers.len() == self.capacity
     }
 
     pub fn add_server(&mut self, route: &str) -> Result<(), &'static str> {
