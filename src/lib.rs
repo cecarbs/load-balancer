@@ -127,7 +127,7 @@ pub struct Routes {
 }
 
 impl Routes {
-    pub fn new(&self, capacity: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         let servers: Vec<String> = vec![String::new(); capacity];
         Routes {
             capacity,

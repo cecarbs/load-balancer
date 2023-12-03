@@ -3,7 +3,7 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use load_balancer::{RingBuffer, ThreadPool};
+use load_balancer::{RingBuffer, Routes, ThreadPool};
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
@@ -29,14 +29,19 @@ fn main() {
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:8080").expect("Failed to bind, port already in use ");
 
-    let mut servers = RingBuffer::new(6);
-    servers.write("http://127.0.0.1:8081");
+    let mut routes = Routes::new(6);
+    routes.add_server("http://127.0.0.1:8081");
+    routes.add_server("http://127.0.0.1:8082");
+    routes.add_server("http://127.0.0.1:8083");
+    routes.add_server("http://127.0.0.1:8084");
+    routes.add_server("http://127.0.0.1:8085");
+    routes.add_server("http://127.0.0.1:8086");
 
     for stream in listener.incoming() {
         pool.execute(|| match stream {
             Ok(stream) => {
                 // handle_connection(stream);
-                blocking_get(stream).unwrap();
+                blocking_get(stream, routes.get_server()).unwrap();
             }
             Err(e) => {
                 println!("Connection failed with error: {}", e);
@@ -45,7 +50,7 @@ fn main() {
     }
 }
 
-fn blocking_get(mut stream: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
+fn blocking_get(mut stream: TcpStream, &str: route) -> Result<(), Box<dyn std::error::Error>> {
     let buf_reader = BufReader::new(&mut stream);
 
     let http_request: Vec<_> = buf_reader
