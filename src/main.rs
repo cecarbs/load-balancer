@@ -6,6 +6,8 @@ use std::{
 
 use load_balancer::{Routes, ThreadPool};
 
+// TODO: command line args for periodic health check interval
+// TODO: command line args for ports
 fn main() {
     let pool = ThreadPool::new(4);
     let listener: TcpListener =
@@ -37,7 +39,6 @@ fn main() {
                     server = routes.get_server().to_string();
                 }
                 println!("Current route is :{:?}", server);
-                // handle_connection(stream);
                 blocking_get(stream, &server).unwrap();
             }
             Err(e) => {

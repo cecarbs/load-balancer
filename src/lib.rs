@@ -1,5 +1,6 @@
 // use core::fmt::Display;
 use std::{
+    collections::HashMap,
     fmt,
     sync::{mpsc, Arc, Mutex},
     thread, usize,
@@ -120,19 +121,29 @@ impl Worker {
 }
 
 #[derive(Debug)]
+enum ServerStatus {
+    Running,
+    Stopped,
+    Offline,
+}
+
+#[derive(Debug)]
 pub struct Routes {
     capacity: usize,
     servers: Vec<String>,
     read_index: usize,
+    status: HashMap<String, ServerStatus>,
 }
 
 impl Routes {
     pub fn new(capacity: usize) -> Self {
         let servers: Vec<String> = Vec::new();
+        let server_status: HashMap<String, ServerStatus> = HashMap::new();
         Routes {
             capacity,
             servers,
             read_index: 0,
+            status: server_status,
         }
     }
 
