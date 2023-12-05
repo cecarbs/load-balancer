@@ -7,6 +7,7 @@ use std::{
 };
 
 use load_balancer::{Routes, ThreadPool};
+use reqwest::Response;
 
 // TODO: command line args for periodic health check interval
 // TODO: command line args for ports
@@ -28,7 +29,8 @@ fn main() {
         routes.add_server("http://127.0.0.1.8081").unwrap();
     } // Lock is automaically relased when "routes" goes out of scope
 
-    thread::spawn(move || ping_server("http://127.0.0.1:8083", 10));
+    let server_status = Arc::clone(&routes);
+    thread::spawn(move || ping_server("http://127.0.0.1:8083", 10, server_status));
 
     for stream in listener.incoming() {
         let arc_routes = Arc::clone(&routes);
@@ -40,7 +42,7 @@ fn main() {
                     // Acquire lock on routes
                     let mut routes = arc_routes.lock().unwrap();
 
-                    server = routes.get_server().to_string();
+                    server = routes.get_running_server().to_string();
                 }
                 println!("Current route is :{:?}", server);
                 blocking_get(stream, &server).unwrap();
@@ -63,19 +65,34 @@ fn blocking_get(mut stream: TcpStream, route: &str) -> Result<(), Box<dyn std::e
 
     println!("Request: {:?}", http_request);
 
-    let body = reqwest::blocking::get(route)?.text()?;
+    // let body = reqwest::blocking::get(route)?.text()?;
+    let body = reqwest::blocking::get(route)?;
+    println!("{:?}", body);
 
-    let response = String::from("HTTP/1.1 200 OK\r\n\r\n") + body.as_str();
+    // let response = String::from("HTTP/1.1 200 OK\r\n\r\n") + body.as_str();
+    let response = String::from("HTTP/1.1 200 OK\r\n\r\n");
 
     stream.write_all(response.as_bytes()).unwrap();
 
     Ok(())
 }
 
-fn ping_server(server: &str, interval: u64) {
+// TODO: pass the routes data structure and remove the unhealthy ones
+fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
     loop {
         let body = reqwest::blocking::get(server);
         println!("{:?}", body);
+        match reqwest::blocking::get(server) {
+            Ok(_) => {
+                println!("Successful ping! {} is healthy", server);
+            }
+            Err(err) => {
+                let routes = routes.lock().unwrap();
+                // TODO: implement logic to remove a healthy server from pool
+                // for route in routes.ge
+                todo!("Do something with the Routes")
+            }
+        }
         thread::sleep(Duration::from_secs(interval));
     }
 }

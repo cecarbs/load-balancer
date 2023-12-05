@@ -136,35 +136,65 @@ pub struct Routes {
 }
 // TODO: use a tuple inside of the vector instead of a string (String, bool)
 impl Routes {
-    pub fn new(capacity: usize) -> Self {
-        let servers: Vec<String> = Vec::new();
-        let server_status: HashMap<String, ServerStatus> = HashMap::new();
+    pub fn new(capacity: usize) -> Routes {
         Routes {
             capacity,
-            servers,
+            servers: Vec::with_capacity(capacity),
             read_index: 0,
-            status: server_status,
+            status: HashMap::with_capacity(capacity),
         }
     }
 
-    fn is_full(&self) -> bool {
-        self.servers.len() == self.capacity
+    fn is_current_server_running(&self) -> bool {
+        let server: &str = &self.servers[self.read_index];
+        matches!(self.status.get(server).unwrap(), ServerStatus::Running)
+    }
+
+    fn cycle_and_find_running_server(&mut self) -> bool {
+        let mut count = 0;
+        while count <= self.capacity {
+            let server: &str = &self.servers[self.read_index];
+            if let Some(entry) = self.status.get(server) {
+                match *entry {
+                    ServerStatus::Running => return true,
+                    _ => {
+                        self.read_index = (self.read_index + 1) % self.capacity;
+                        count += 1;
+                    }
+                };
+            }
+        }
+        eprintln!("There are no servers running!");
+        false
     }
 
     pub fn add_server(&mut self, route: &str) -> Result<(), &'static str> {
         if self.servers.len() == self.capacity {
             Err("Not enough capacity!")
         } else {
+            self.status.insert(route.to_string(), ServerStatus::Running);
             self.servers.push(route.to_string());
             Ok(())
         }
     }
 
-    // TODO: rename function
-    pub fn get_server(&mut self) -> &str {
-        let server: &str = &self.servers[self.read_index];
-        self.read_index = (self.read_index + 1) % self.capacity;
-        server
+    // TODO: refactor to use a result
+    pub fn get_running_server(&mut self) -> &str {
+        if self.is_current_server_running() {
+            let server: &str = &self.servers[self.read_index];
+            self.read_index = (self.read_index + 1) % self.capacity;
+            server
+        } else {
+            self.cycle_and_find_running_server();
+        }
+    }
+
+    pub fn disable_server(&mut self, server: &str) {
+        if let Some(entry) = self.status.get_mut(server) {
+            *entry = ServerStatus::Offline;
+        } else {
+            println!("Server {} does not exist!", server);
+        }
     }
 }
 
