@@ -2,6 +2,8 @@ use std::{
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex, MutexGuard},
+    thread,
+    time::Duration,
 };
 
 use load_balancer::{Routes, ThreadPool};
@@ -25,6 +27,8 @@ fn main() {
         routes.add_server("http://127.0.0.1:8082").unwrap();
         routes.add_server("http://127.0.0.1.8081").unwrap();
     } // Lock is automaically relased when "routes" goes out of scope
+
+    thread::spawn(move || ping_server("http://127.0.0.1:8083", 10));
 
     for stream in listener.incoming() {
         let arc_routes = Arc::clone(&routes);
@@ -66,4 +70,12 @@ fn blocking_get(mut stream: TcpStream, route: &str) -> Result<(), Box<dyn std::e
     stream.write_all(response.as_bytes()).unwrap();
 
     Ok(())
+}
+
+fn ping_server(server: &str, interval: u64) {
+    loop {
+        let body = reqwest::blocking::get(server);
+        println!("{:?}", body);
+        thread::sleep(Duration::from_secs(interval));
+    }
 }

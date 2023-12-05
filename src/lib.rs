@@ -134,7 +134,7 @@ pub struct Routes {
     read_index: usize,
     status: HashMap<String, ServerStatus>,
 }
-
+// TODO: use a tuple inside of the vector instead of a string (String, bool)
 impl Routes {
     pub fn new(capacity: usize) -> Self {
         let servers: Vec<String> = Vec::new();
