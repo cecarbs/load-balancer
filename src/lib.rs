@@ -134,7 +134,7 @@ pub struct Routes {
     read_index: usize,
     status: HashMap<String, ServerStatus>,
 }
-// TODO: use a tuple inside of the vector instead of a string (String, bool)
+
 impl Routes {
     pub fn new(capacity: usize) -> Routes {
         Routes {
@@ -150,13 +150,13 @@ impl Routes {
         matches!(self.status.get(server).unwrap(), ServerStatus::Running)
     }
 
-    fn cycle_and_find_running_server(&mut self) -> bool {
+    fn cycle_and_find_running_server(&mut self) -> Result<&str, &'static str> {
         let mut count = 0;
         while count <= self.capacity {
             let server: &str = &self.servers[self.read_index];
             if let Some(entry) = self.status.get(server) {
                 match *entry {
-                    ServerStatus::Running => return true,
+                    ServerStatus::Running => return Ok(server),
                     _ => {
                         self.read_index = (self.read_index + 1) % self.capacity;
                         count += 1;
@@ -164,8 +164,7 @@ impl Routes {
                 };
             }
         }
-        eprintln!("There are no servers running!");
-        false
+        Err("There are no servers running!")
     }
 
     pub fn add_server(&mut self, route: &str) -> Result<(), &'static str> {
@@ -178,14 +177,16 @@ impl Routes {
         }
     }
 
-    // TODO: refactor to use a result
-    pub fn get_running_server(&mut self) -> &str {
+    pub fn get_running_server(&mut self) -> Result<String, &'static str> {
         if self.is_current_server_running() {
             let server: &str = &self.servers[self.read_index];
             self.read_index = (self.read_index + 1) % self.capacity;
-            server
+            Ok(server.to_string())
         } else {
-            self.cycle_and_find_running_server();
+            match self.cycle_and_find_running_server() {
+                Ok(server) => Ok(server.to_string()),
+                Err(err) => Err(err),
+            }
         }
     }
 
@@ -195,6 +196,12 @@ impl Routes {
         } else {
             println!("Server {} does not exist!", server);
         }
+    }
+
+    // TODO: might need to break up the logic but need to enable a server if it was offline and is
+    // currently running again determined by the ping
+    pub fn enable_server(&mut self, server: &str) {
+        todo!("")
     }
 }
 

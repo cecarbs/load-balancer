@@ -42,7 +42,7 @@ fn main() {
                     // Acquire lock on routes
                     let mut routes = arc_routes.lock().unwrap();
 
-                    server = routes.get_running_server().to_string();
+                    server = routes.get_running_server();
                 }
                 println!("Current route is :{:?}", server);
                 blocking_get(stream, &server).unwrap();
