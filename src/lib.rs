@@ -145,7 +145,7 @@ impl Routes {
         }
     }
 
-    fn is_current_server_running(&self) -> bool {
+    pub fn is_current_server_running(&self) -> bool {
         let server: &str = &self.servers[self.read_index];
         matches!(self.status.get(server).unwrap(), ServerStatus::Running)
     }
@@ -190,19 +190,18 @@ impl Routes {
         }
     }
 
-    pub fn disable_server(&mut self, server: &str) {
+    pub fn disable_server(&mut self, server: &str) -> Result<(), &'static str> {
         if let Some(entry) = self.status.get_mut(server) {
             *entry = ServerStatus::Offline;
+            Ok(())
         } else {
-            println!("Server {} does not exist!", server);
+            Err("Server {server} does not exist!")
         }
     }
 
     // TODO: might need to break up the logic but need to enable a server if it was offline and is
     // currently running again determined by the ping
-    pub fn enable_server(&mut self, server: &str) {
-        todo!("")
-    }
+    pub fn enable_server(&mut self, server: &str) {}
 }
 
 // #[derive(Debug, Clone)]

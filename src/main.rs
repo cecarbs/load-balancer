@@ -42,7 +42,8 @@ fn main() {
                     // Acquire lock on routes
                     let mut routes = arc_routes.lock().unwrap();
 
-                    server = routes.get_running_server();
+                    // Handle this error better
+                    server = routes.get_running_server().unwrap();
                 }
                 println!("Current route is :{:?}", server);
                 blocking_get(stream, &server).unwrap();
@@ -85,12 +86,17 @@ fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
         match reqwest::blocking::get(server) {
             Ok(_) => {
                 println!("Successful ping! {} is healthy", server);
+                let routes = Arc::clone(&routes);
+                let arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
+
+                if !arc_routes.is_current_server_running() {
+                    todo!("Turn server on!");
+                }
             }
-            Err(err) => {
-                let routes = routes.lock().unwrap();
-                // TODO: implement logic to remove a healthy server from pool
-                // for route in routes.ge
-                todo!("Do something with the Routes")
+            Err(_) => {
+                let routes = Arc::clone(&routes);
+                let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
+                arc_routes.disable_server(server).unwrap();
             }
         }
         thread::sleep(Duration::from_secs(interval));
