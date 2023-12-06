@@ -87,10 +87,11 @@ fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
             Ok(_) => {
                 println!("Successful ping! {} is healthy", server);
                 let routes = Arc::clone(&routes);
-                let arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
+
+                let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
 
                 if !arc_routes.is_current_server_running() {
-                    todo!("Turn server on!");
+                    arc_routes.enable_server(server).unwrap();
                 }
             }
             Err(_) => {
