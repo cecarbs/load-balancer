@@ -31,8 +31,8 @@ fn main() {
         routes.add_server("http://127.0.0.1:8083").unwrap();
     } // Lock is automaically relased when "routes" goes out of scope
 
-    let server_status = Arc::clone(&routes);
-    thread::spawn(move || ping_server("http://127.0.0.1:8083", 5, server_status));
+    let servers: Arc<Mutex<Routes>> = Arc::clone(&routes);
+    thread::spawn(move || ping_servers(5, servers));
 
     for stream in listener.incoming() {
         let arc_routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
@@ -78,25 +78,31 @@ fn blocking_get(mut stream: TcpStream, route: &str) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
-fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
+fn ping_servers(interval: u64, routes: Arc<Mutex<Routes>>) {
     loop {
-        let body = reqwest::blocking::get(server);
-        println!("{:?}", body);
-        match reqwest::blocking::get(server) {
+        let server: String;
+        {
+            let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
+            server = arc_routes.get_server();
+        }
+        match reqwest::blocking::get(&server) {
             Ok(_) => {
                 println!("Successful ping! {} is healthy", server);
                 let routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
 
                 let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
 
-                if !arc_routes.is_current_server_running() {
-                    arc_routes.enable_server(server).unwrap();
+                if !arc_routes.is_server_running(&server) {
+                    println!("Enabling server {}", server);
+                    arc_routes.enable_server(server.as_str()).unwrap();
+                    println!("Successfully enabled server {}", server);
                 }
             }
             Err(_) => {
+                println!("Server {} became unhealthy!", server);
                 let routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
                 let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
-                arc_routes.disable_server(server).unwrap();
+                arc_routes.disable_server(server.as_str()).unwrap();
             }
         }
         thread::sleep(Duration::from_secs(interval));

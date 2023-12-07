@@ -150,6 +150,15 @@ impl Routes {
         matches!(self.status.get(server).unwrap(), ServerStatus::Running)
     }
 
+    pub fn is_server_running(&self, server: &str) -> bool {
+        let server = server.to_string();
+        let entry: &ServerStatus = self.status.get(&server).unwrap();
+        match entry {
+            ServerStatus::Running => true,
+            _ => false,
+        }
+    }
+
     fn cycle_and_find_running_server(&mut self) -> Result<&str, &'static str> {
         let mut count = 0;
         while count <= self.capacity {
@@ -188,6 +197,13 @@ impl Routes {
                 Err(err) => Err(err),
             }
         }
+    }
+
+    pub fn get_server(&mut self) -> String {
+        let server = self.servers[self.read_index].to_string();
+        self.read_index = (self.read_index + 1) % self.capacity;
+
+        server
     }
 
     pub fn disable_server(&mut self, server: &str) -> Result<(), &'static str> {
