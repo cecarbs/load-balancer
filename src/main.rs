@@ -16,7 +16,8 @@ fn main() {
     let listener: TcpListener =
         TcpListener::bind("127.0.0.1:8080").expect("Failed to bind, port already in use ");
 
-    let routes = Arc::new(Mutex::new(Routes::new(2)));
+    // TODO: leverage a builder pattern
+    let routes = Arc::new(Mutex::new(Routes::new(3)));
 
     // Scope created to ensure lock acquired during this scope is relased after initialization is
     // complete
@@ -26,21 +27,22 @@ fn main() {
         // MutexGuard is a lock on Mutex and implements "Drop" trait
         let mut routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
         routes.add_server("http://127.0.0.1:8082").unwrap();
-        routes.add_server("http://127.0.0.1.8081").unwrap();
+        routes.add_server("http://127.0.0.1:8081").unwrap();
+        routes.add_server("http://127.0.0.1:8083").unwrap();
     } // Lock is automaically relased when "routes" goes out of scope
 
     let server_status = Arc::clone(&routes);
-    thread::spawn(move || ping_server("http://127.0.0.1:8082", 5, server_status));
+    thread::spawn(move || ping_server("http://127.0.0.1:8083", 5, server_status));
 
     for stream in listener.incoming() {
-        let arc_routes = Arc::clone(&routes);
+        let arc_routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
         pool.execute(move || match stream {
             Ok(stream) => {
                 let server: String;
                 // Lock scope
                 {
                     // Acquire lock on routes
-                    let mut routes = arc_routes.lock().unwrap();
+                    let mut routes: MutexGuard<'_, Routes> = arc_routes.lock().unwrap();
 
                     // Handle this error better
                     server = routes.get_running_server().unwrap();
@@ -83,7 +85,7 @@ fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
         match reqwest::blocking::get(server) {
             Ok(_) => {
                 println!("Successful ping! {} is healthy", server);
-                let routes = Arc::clone(&routes);
+                let routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
 
                 let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
 
@@ -92,7 +94,7 @@ fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
                 }
             }
             Err(_) => {
-                let routes = Arc::clone(&routes);
+                let routes: Arc<Mutex<Routes>> = Arc::clone(&routes);
                 let mut arc_routes: MutexGuard<'_, Routes> = routes.lock().unwrap();
                 arc_routes.disable_server(server).unwrap();
             }
