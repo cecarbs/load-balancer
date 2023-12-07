@@ -30,7 +30,7 @@ fn main() {
     } // Lock is automaically relased when "routes" goes out of scope
 
     let server_status = Arc::clone(&routes);
-    thread::spawn(move || ping_server("http://127.0.0.1:8083", 10, server_status));
+    thread::spawn(move || ping_server("http://127.0.0.1:8082", 5, server_status));
 
     for stream in listener.incoming() {
         let arc_routes = Arc::clone(&routes);
@@ -64,21 +64,18 @@ fn blocking_get(mut stream: TcpStream, route: &str) -> Result<(), Box<dyn std::e
         .take_while(|line| !line.is_empty())
         .collect();
 
-    println!("Request: {:?}", http_request);
+    // println!("Request: {:?}", http_request);
 
-    // let body = reqwest::blocking::get(route)?.text()?;
-    let body = reqwest::blocking::get(route)?;
-    println!("{:?}", body);
+    let body: String = reqwest::blocking::get(route)?.text()?;
+    // println!("{:?}", body);
 
-    // let response = String::from("HTTP/1.1 200 OK\r\n\r\n") + body.as_str();
-    let response = String::from("HTTP/1.1 200 OK\r\n\r\n");
+    let response: String = String::from("HTTP/1.1 200 OK\r\n\r\n") + body.as_str();
 
     stream.write_all(response.as_bytes()).unwrap();
 
     Ok(())
 }
 
-// TODO: pass the routes data structure and remove the unhealthy ones
 fn ping_server(server: &str, interval: u64, routes: Arc<Mutex<Routes>>) {
     loop {
         let body = reqwest::blocking::get(server);
